@@ -1,5 +1,5 @@
 #include "log_task.h"
-#include "bmi088_task.h"
+#include "imu_task.h"
 
 #include "string.h"
 #include "stdio.h"

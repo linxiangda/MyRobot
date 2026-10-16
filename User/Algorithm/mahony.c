@@ -12,20 +12,23 @@ static float Clamp(float value, float min, float max)
     return value;
 }
 
-void Normalize(float *v, unsigned int count)
+static uint8_t Finite(float x)
+{
+    return x == x && fabsf(x) <= FLT_MAX;
+}
+
+static uint8_t Normalize(float *v, unsigned int count)
 {
     float norm = 0.0f;
     unsigned int i;
-
     for (i = 0; i < count; i++) {
+        if (!Finite(v[i])) return 0;
         norm += v[i] * v[i];
     }
-
+    if (!Finite(norm) || norm < 1.0e-12f) return 0;
     norm = 1.0f / sqrtf(norm);
-
-    for (i = 0; i < count; i++) {
-        v[i] *= norm;
-    }
+    for (i = 0; i < count; i++) v[i] *= norm;
+    return 1;
 }
 
 void Mahony_Init(Mahony_t *filter, float kp, float ki)
@@ -50,7 +53,9 @@ uint8_t Mahony_AlignGravity(Mahony_t *filter,
     float cr, sr;
     float cp, sp;
 
+    if (filter == NULL || accel == NULL) return 0;
     memcpy(a, accel, sizeof(a));
+    if (!Normalize(a, 3)) return 0;
 
     roll = atan2f(a[1], a[2]);
     pitch = atan2f(-a[0], sqrtf(a[1] * a[1] + a[2] * a[2]));
@@ -90,6 +95,22 @@ uint8_t Mahony_Update(Mahony_t *filter,
 
     unsigned int i;
 
+    if (filter == NULL || gyro == NULL || accel == NULL ||
+        !Finite(dt) || dt <= 0.0f || dt > 0.05f ||
+        !Finite(accel_weight) || !Finite(filter->kp) ||
+        !Finite(filter->ki) || !Finite(filter->integral_limit) ||
+        filter->integral_limit < 0.0f) return 0;
+    for (i = 0; i < 3; i++) {
+        if (!Finite(gyro[i]) || !Finite(filter->integral[i])) return 0;
+    }
+    {
+        float qnorm = 0.0f;
+        for (i = 0; i < 4; i++) {
+            if (!Finite(filter->q[i])) return 0;
+            qnorm += filter->q[i] * filter->q[i];
+        }
+        if (!Finite(qnorm) || qnorm < 1.0e-12f) return 0;
+    }
     accel_weight = Clamp(accel_weight, 0.0f, 1.0f);
 
     memcpy(a, accel, sizeof(a));
@@ -100,7 +121,7 @@ uint8_t Mahony_Update(Mahony_t *filter,
     x = filter->q[1];
     y = filter->q[2];
     z = filter->q[3];
-    Normalize(a, 3);
+    if (accel_weight > 0.0f && !Normalize(a, 3)) return 0;
     if (accel_weight > 0.0f) {
         /* 当前姿态预测的重力参考方向，表达在机体坐标系中 */
         gravity[0] = 2.0f * (x * z - w * y);
@@ -152,6 +173,11 @@ uint8_t Mahony_Update(Mahony_t *filter,
                      +x * omega[1]
                      -y * omega[0]) * half_dt;
 
+    /* Commit only a finite unit quaternion; keep old state on failure. */
+    if (!Normalize(next_q, 4)) return 0;
+    for (i = 0; i < 3; i++) {
+        if (!Finite(integral[i])) return 0;
+    }
     memcpy(filter->q, next_q, sizeof(next_q));
     memcpy(filter->integral, integral, sizeof(integral));
 

@@ -10,6 +10,7 @@ typedef struct {
     float accel[3];       /* 滤波后加速度，m/s2，包含重力 */
     float gyro[3];        /* 去零偏、滤波后角速度，rad/s */
 
+    /* [w,x,y,z], body -> world; roll/pitch/yaw below are degrees. */
     float quaternion[4];
 
     float roll;           /* degree */
@@ -53,4 +54,3 @@ uint8_t IMU_Update(IMU_t *imu,
 const IMUResult_t *IMU_GetResult(const IMU_t *imu);
 
 #endif
-			   

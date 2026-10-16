@@ -25,8 +25,20 @@ static void ResetFilters(IMU_t *imu)
     }
 }
 
+/* Handle bypass here without changing lowpass.c. */
+static float ApplyLowPass(LowPassFilter_t *filter, float input, float dt)
+{
+    if (filter->cutoff_hz <= 0.0f) {
+        filter->output = input;
+        filter->initialized = 1;
+        return input;
+    }
+    return LowPass_Update(filter, input, dt);
+}
+
 void IMU_Init(IMU_t *imu)
 {
+    if (imu == NULL) return;
     memset(imu, 0, sizeof(*imu));
 
     ResetFilters(imu);
@@ -41,6 +53,10 @@ void IMU_SetGyroBias(IMU_t *imu, const float bias[3])
 {
     unsigned int i;
 
+    if (imu == NULL || bias == NULL) return;
+    for (i = 0; i < 3; i++) {
+        if (!IsFinite(bias[i])) return;
+    }
     for (i = 0; i < 3; i++) {
         imu->gyro_bias[i] = bias[i];
 
@@ -66,7 +82,9 @@ uint8_t IMU_Update(IMU_t *imu,
 
     unsigned int i;
 
+    if (imu == NULL) return 0;
     imu->result.valid = 0;
+    if (accel == NULL || gyro == NULL) return 0;
 
     /*
      * 间隔过长时，本版选择重新对齐。
@@ -111,21 +129,21 @@ uint8_t IMU_Update(IMU_t *imu,
         /* 首次只对齐，不积分此前未知的运动 */
         for (i = 0; i < 3; i++) {
             imu->result.accel[i] =
-                LowPass_Update(&imu->accel_filter[i],
+                ApplyLowPass(&imu->accel_filter[i],
                                accel[i], dt);
 
             imu->result.gyro[i] =
-                LowPass_Update(&imu->gyro_filter[i],
+                ApplyLowPass(&imu->gyro_filter[i],
                                gyro[i] - imu->gyro_bias[i], dt);
         }
     } else {
         for (i = 0; i < 3; i++) {
             imu->result.accel[i] =
-                LowPass_Update(&imu->accel_filter[i],
+                ApplyLowPass(&imu->accel_filter[i],
                                accel[i], dt);
 
             imu->result.gyro[i] =
-                LowPass_Update(&imu->gyro_filter[i],
+                ApplyLowPass(&imu->gyro_filter[i],
                                gyro[i] - imu->gyro_bias[i], dt);
         }
 
@@ -167,5 +185,5 @@ uint8_t IMU_Update(IMU_t *imu,
 
 const IMUResult_t *IMU_GetResult(const IMU_t *imu)
 {
-    return &imu->result;
+    return imu != NULL ? &imu->result : NULL;
 }

@@ -38,7 +38,7 @@
 #include <stdio.h> 
 #include <string.h> 
 
-#include "bmi088_task.h"
+#include "imu_task.h"
 #include "service_task.h"
 #include "log_task.h"
 #include "remote_task.h"
