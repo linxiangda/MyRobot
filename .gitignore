@@ -3,4 +3,4 @@
 /MDK-ARM/*.lst
 
 # 当前电脑的 VS Code 配置及日志
-/MDK-ARM/.vscode/
+.vscode/
