@@ -1338,6 +1338,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\Task\remote_task.h</FilePath>
             </File>
+            <File>
+              <FileName>can_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\can_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>can_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\can_task.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

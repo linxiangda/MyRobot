@@ -42,6 +42,7 @@
 #include "service_task.h"
 #include "log_task.h"
 #include "remote_task.h"
+#include "can_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,8 +78,8 @@ TimerHandle_t xLEDTimer = NULL;
 /* eventgroup */
 EventGroupHandle_t xEventGroup = NULL;
 /* task */
-TaskHandle_t canTaskHandle = NULL;
-
+TaskHandle_t MotorCanTaskHandle = NULL;
+TaskHandle_t UpperCanTaskHandle = NULL;
 char Buffer;
 /* USER CODE END PV */
 
@@ -134,6 +135,8 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   MX_FDCAN1_Init();
+  MX_FDCAN2_Init();
+  MX_FDCAN3_Init();
   /* USER CODE BEGIN 2 */
   /* binarysemaphore create */
   xKeySemphr = xSemaphoreCreateBinary();
@@ -174,9 +177,11 @@ int main(void)
   // xReturn = xTaskCreate(vVbusTask, "VbusTask", 128, NULL, 1, NULL);
   // configASSERT(xReturn == pdPASS); 
 
-  xReturn = xTaskCreate(vCanTestTask, "CanTestTask", 256, NULL, 1, &canTaskHandle);
+  xReturn = xTaskCreate(vMotorCanTask, "MotorCanTask", 256, NULL, 1, &MotorCanTaskHandle);
   configASSERT(xReturn == pdPASS);
-  
+
+  xReturn = xTaskCreate(vUpperCanTask, "UpperCanTask", 256, NULL, 1, &UpperCanTaskHandle);
+  configASSERT(xReturn == pdPASS);
   
 //  xTaskCreate(vSystemInfoTask,"System Info",128,NULL,1,NULL);	
 
