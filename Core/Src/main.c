@@ -168,8 +168,8 @@ int main(void)
   xReturn = xTaskCreate(vIMUTask,"IMUTask",128,NULL,2,NULL);
   configASSERT(xReturn == pdPASS);
   
-//  xReturn = xTaskCreate(vLOGTask, "LogTask", 512, NULL, 2, NULL);
-//  configASSERT(xReturn == pdPASS);
+  xReturn = xTaskCreate(vLOGTask, "LogTask", 512, NULL, 2, NULL);
+  configASSERT(xReturn == pdPASS);
   
   xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 128, NULL, 1, NULL);
   configASSERT(xReturn == pdPASS);

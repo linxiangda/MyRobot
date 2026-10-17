@@ -13,6 +13,8 @@
 extern QueueHandle_t xSerialQueue;
 extern QueueHandle_t xIMUQueue;
 
+void print_imulog(void);
+
 void  vSerialGateKeeperTask(void *pvParameters){
 	char *pMemory;
 	for(;;){
@@ -30,29 +32,29 @@ void print(const char *str){
 	xQueueSend(xSerialQueue,&pMemory,portMAX_DELAY);
 }
 
-void vLOGTask(void *pvParameters)
-{
+void vLOGTask(void *pvParameters){
+    for (;;){
+        print_imulog();
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+    }
+}
+
+void print_imulog(void){
+    int len;
     IMUData_TypeDef data;
     char packet[128];
+    if (xQueuePeek(xIMUQueue, &data,pdMS_TO_TICKS(1000)) != pdTRUE) return;
+    if (!data.calibrated || !data.valid) return;
 
-    for (;;)
-    {
-        if (xQueueReceive(xIMUQueue, &data, portMAX_DELAY) == pdTRUE){
-            int len = snprintf(
-                packet, sizeof(packet),
-				"ACC:%.3f,%.3f,%.3f \nGYRO:%.3f,%.3f,%.3f \nTEM%.2f\n",
-                data.accel[0],
-                data.accel[1],
-                data.accel[2],
-                data.gyro[0],
-                data.gyro[1],
-                data.gyro[2],
-                data.temperature);
+    len = snprintf(
+            packet, sizeof(packet),
+            "%.2f,%.2f,%.2f\n",
+            (double)data.roll,
+            (double)data.pitch,
+            (double)data.yaw);
 
-            if (len > 0){
-                print(packet);
-            }
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-    }
+    if (len > 0 && (size_t)len < sizeof(packet)){
+        print(packet);
+    }   
 }
