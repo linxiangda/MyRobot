@@ -137,6 +137,7 @@ int main(void)
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   /* binarysemaphore create */
   xKeySemphr = xSemaphoreCreateBinary();

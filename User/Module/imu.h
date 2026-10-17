@@ -9,11 +9,11 @@ typedef struct{
     float temperature;
     float quaternion[4];
     float roll,pitch,yaw;
-    float pitch_acc,pitch_gyro;
+    uint8_t error;
 }IMUData_TypeDef;
 uint8_t IMU_Init(void);
 void IMU_RawDataGet(IMUData_TypeDef *imudata);
-void IMU_PosCalculate(IMUData_TypeDef *imudata,float dt);
-void only_pitch(IMUData_TypeDef *imudata,float dt);
+void IMU_PosCalculate(IMUData_TypeDef *imudata, float dt);
+void IMU_TemperatureControl(IMUData_TypeDef *imudata, float set_temperature, float dt);
 
 #endif

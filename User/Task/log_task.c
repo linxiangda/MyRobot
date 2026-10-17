@@ -39,7 +39,7 @@ void vLOGTask(void *pvParameters){
 
     }
 }
-
+#include "tim.h"
 void print_imulog(void){
     int len;
     static IMUData_TypeDef data;
@@ -48,10 +48,11 @@ void print_imulog(void){
 
     len = snprintf(
             packet, sizeof(packet),
-            "%.2f,%.2f,%.2f\n",
+            "%.2f,%.2f,%.2f,%.2f,%d\n",
             (double)data.roll,
             (double)data.pitch,
-            (double)data.yaw);
+            (double)data.yaw,
+            (double)data.temperature,htim3.Instance->CCR3);
 
     if (len > 0 && (size_t)len < sizeof(packet)){
         print(packet);

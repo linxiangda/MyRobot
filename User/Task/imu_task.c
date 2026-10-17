@@ -7,14 +7,15 @@ extern QueueHandle_t xIMUQueue;
 
 void vIMUTask(void *pvParameters)
 {
-    IMUData_TypeDef data;
+    IMUData_TypeDef data = {0};
     TickType_t last_wake;
     TickType_t period = pdMS_TO_TICKS(1);
-    IMU_Init();
+    while(IMU_Init()){vTaskDelay(pdMS_TO_TICKS(100));}
     last_wake = xTaskGetTickCount();
     for (;;) {
         IMU_RawDataGet(&data);    
-        IMU_PosCalculate(&data,0.001);
+        if (data.error == 0) IMU_PosCalculate(&data,0.001);
+        // IMU_TemperatureControl(&data,25,0.001);
         xQueueOverwrite(xIMUQueue, &data);
         
         if ((xTaskGetTickCount() - last_wake) >= period)
