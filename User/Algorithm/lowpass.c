@@ -2,14 +2,8 @@
 
 #define PI 3.14159265358979323846f
 
-void LowPass_Init(LowPassFilter_t *filter, float cutoff_hz)
-{
-    filter->cutoff_hz = cutoff_hz;
-    filter->output = 0.0f;
-    filter->initialized = 0;
-}
 /* 截止频率必须小于fs/2，最好留出明显余量fs/5 */
-float LowPass_Update(LowPassFilter_t *filter, float input, float dt){
+float LowPass_Update(LowPassFilter_t *filter, float input, float cutoff_hz,float dt){
     float rc;
     float alpha;
 
@@ -20,7 +14,7 @@ float LowPass_Update(LowPassFilter_t *filter, float input, float dt){
         return input;
     }
 
-    rc = 1.0f / (2.0f * PI * filter->cutoff_hz); // rc = T = 1/wc = 1/(2*pi*fc)
+    rc = 1.0f / (2.0f * PI * cutoff_hz); // rc = T = 1/wc = 1/(2*pi*fc)
     alpha = dt / (rc + dt); // alpha = dt / (rc + dt) 即每次采样时，输出对当前误差修正多少的比例
     
     filter->output = filter->output + alpha * (input - filter->output);// 离散差分方程

@@ -35,17 +35,16 @@ void print(const char *str){
 void vLOGTask(void *pvParameters){
     for (;;){
         print_imulog();
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(10));
 
     }
 }
 
 void print_imulog(void){
     int len;
-    IMUData_TypeDef data;
+    static IMUData_TypeDef data;
     char packet[128];
     if (xQueuePeek(xIMUQueue, &data,pdMS_TO_TICKS(1000)) != pdTRUE) return;
-    if (!data.calibrated || !data.valid) return;
 
     len = snprintf(
             packet, sizeof(packet),

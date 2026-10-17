@@ -10,18 +10,13 @@ void vIMUTask(void *pvParameters)
     IMUData_TypeDef data;
     TickType_t last_wake;
     TickType_t period = pdMS_TO_TICKS(1);
-
-    while (IMU_ModuleInit() != 0) {
-        IMU_ModuleGetData(&data);
-        xQueueOverwrite(xIMUQueue, &data);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    IMU_Init();
     last_wake = xTaskGetTickCount();
     for (;;) {
-        IMU_ModuleUpdate();
-        IMU_ModuleGetData(&data);
+        IMU_RawDataGet(&data);    
+        IMU_PosCalculate(&data,0.001);
         xQueueOverwrite(xIMUQueue, &data);
-
+        
         if ((xTaskGetTickCount() - last_wake) >= period)
             last_wake = xTaskGetTickCount();
         xTaskDelayUntil(&last_wake, period);

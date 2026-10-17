@@ -4,12 +4,10 @@
 
 
 typedef struct {
-    float cutoff_hz;     /* 截止频率，Hz */
-    float output;        /* 上次滤波结果 */
+    float output;   
     uint8_t initialized;
 } LowPassFilter_t;
 
-void LowPass_Init(LowPassFilter_t *filter, float cutoff_hz);
-float LowPass_Update(LowPassFilter_t *filter, float input, float dt);
+float LowPass_Update(LowPassFilter_t *filter, float input, float cutoff_hz,float dt);
 
 #endif
