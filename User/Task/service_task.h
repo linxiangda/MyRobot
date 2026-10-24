@@ -12,5 +12,4 @@ typedef struct{
 void vLEDTask(void *pvParameters);
 void vKeyTask(void *pvParameters);
 void vBuzzerTask(void *pvParameters);
-void vVbusTask(void *pvParameters);
 #endif

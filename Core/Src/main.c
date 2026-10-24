@@ -43,6 +43,7 @@
 #include "log_task.h"
 #include "remote_task.h"
 #include "can_task.h"
+#include "vbus_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,11 +69,14 @@ static const LEDBlink_TypeDef led1Blink = { // LED1
 	.LED_PIN = GPIO_PIN_13,
 	.LED_Period = 1000,
 };
+MotorData_TypeDef motordata = {0};
 /* binarysemaphore */
 SemaphoreHandle_t xKeySemphr = NULL;
 /* queue */
 QueueHandle_t xSerialQueue = NULL;
 QueueHandle_t xIMUQueue = NULL;
+QueueHandle_t xMotorQueue = NULL;
+QueueHandle_t xVbusQueue = NULL;
 /* softtimer */
 TimerHandle_t xLEDTimer = NULL;
 /* eventgroup */
@@ -80,7 +84,6 @@ EventGroupHandle_t xEventGroup = NULL;
 /* task */
 TaskHandle_t MotorCanTaskHandle = NULL;
 TaskHandle_t UpperCanTaskHandle = NULL;
-char Buffer;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -147,6 +150,10 @@ int main(void)
   configASSERT(xSerialQueue != NULL);
   xIMUQueue = xQueueCreate(1, sizeof(IMUData_TypeDef));
   configASSERT(xIMUQueue != NULL);
+  xMotorQueue = xQueueCreate(1, sizeof(MotorData_TypeDef));
+  configASSERT(xMotorQueue != NULL);
+  xVbusQueue = xQueueCreate(1, sizeof(float));
+  configASSERT(xVbusQueue != NULL);
   /* softtimer create*/
   xLEDTimer = xTimerCreate("LEDTimer",pdMS_TO_TICKS(2000),pdFALSE,NULL,vTimerCallback);
   configASSERT(xLEDTimer != NULL);
@@ -175,16 +182,14 @@ int main(void)
   xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 128, NULL, 1, NULL);
   configASSERT(xReturn == pdPASS);
   
-  // xReturn = xTaskCreate(vVbusTask, "VbusTask", 128, NULL, 1, NULL);
-  // configASSERT(xReturn == pdPASS); 
+  xReturn = xTaskCreate(vVbusTask, "VbusTask", 128, NULL, 1, NULL);
+  configASSERT(xReturn == pdPASS); 
 
   xReturn = xTaskCreate(vMotorCanTask, "MotorCanTask", 256, NULL, 1, &MotorCanTaskHandle);
   configASSERT(xReturn == pdPASS);
 
   xReturn = xTaskCreate(vUpperCanTask, "UpperCanTask", 256, NULL, 1, &UpperCanTaskHandle);
   configASSERT(xReturn == pdPASS);
-  
-//  xTaskCreate(vSystemInfoTask,"System Info",128,NULL,1,NULL);	
 
   vTaskStartScheduler();
   /* USER CODE END 2 */

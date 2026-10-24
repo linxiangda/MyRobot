@@ -1,9 +1,10 @@
 #include "can_bsp.h"
 #include "fdcan.h"
 #include "string.h"
+/* CAN启动（配置CAN滤波器，开启CAN） */
 HAL_StatusTypeDef CAN_Start(FDCAN_HandleTypeDef *hfdcan,uint32_t rxID,uint32_t rxMask){
     FDCAN_FilterTypeDef filter;
-
+  
     if (hfdcan == NULL || rxID > 0x7FFU || rxMask > 0x7FFU)
         return HAL_ERROR;
 
@@ -28,9 +29,10 @@ HAL_StatusTypeDef CAN_Start(FDCAN_HandleTypeDef *hfdcan,uint32_t rxID,uint32_t r
     return HAL_FDCAN_Start(hfdcan);
 }
 
+/* CAN发送 */
 HAL_StatusTypeDef CAN_Send_Data(FDCAN_HandleTypeDef *hfdcan,uint32_t txID, const uint8_t *data,uint32_t len){
     FDCAN_TxHeaderTypeDef tx;
-    uint8_t payload[8] = {0};
+    uint8_t buffer[8] = {0};
 
     if (txID > 0x7FF || len > 8 || data == NULL)
         return HAL_ERROR;
@@ -38,7 +40,7 @@ HAL_StatusTypeDef CAN_Send_Data(FDCAN_HandleTypeDef *hfdcan,uint32_t txID, const
     if (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
         return HAL_BUSY;
 
-    memcpy(payload, data, len); //防止数据写入时，越界读取
+    memcpy(buffer, data, len); //防止数据写入时，越界读取
 
     tx.Identifier = txID; //ID
     tx.IdType = FDCAN_STANDARD_ID; //标准帧
@@ -50,6 +52,6 @@ HAL_StatusTypeDef CAN_Send_Data(FDCAN_HandleTypeDef *hfdcan,uint32_t txID, const
     tx.TxEventFifoControl = FDCAN_NO_TX_EVENTS;//发送后不生成发送事件FIFO记录
     tx.MessageMarker = 0;//软件给报文设置的标记，用于在发送事件中识别报文；当前未启用发送事件，所以不用
 
-    return HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx, payload);
+    return HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx, buffer);
 }
 
