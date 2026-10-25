@@ -39,9 +39,9 @@ void print(const char *str){
 
 void vLOGTask(void *pvParameters){
     for (;;){
-        // print_imulog();
+        print_imulog();
         // print_motorlog();
-        print_vbuslog();
+        // print_vbuslog();
         vTaskDelay(pdMS_TO_TICKS(10));
 
     }

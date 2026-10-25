@@ -42,6 +42,7 @@ void vKeyTask(void *pvParameters){
 	}
 } 
 
+/* ·äÃùÆ÷ÈÎÎñ */
 void vBuzzerTask(void *pvParameters){
 	for(;;){
 		xSemaphoreTake(xKeySemphr, portMAX_DELAY);

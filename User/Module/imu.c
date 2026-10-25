@@ -6,6 +6,8 @@
 #include "tim.h"
 
 #define PI 3.14159265f
+#define WHEEL_RADIUS 0.04566f
+#define WHEEL_TRACK 0.2062f
 
 Mahony_t mahonyfliter;
 PID_t temperature_PID;
@@ -42,8 +44,26 @@ void IMU_RawDataGet(IMUData_TypeDef *imudata){
     }
     imudata->temperature = data[6];
 }
+LowPassFilter_t motorspeed_lowpass_L;
+LowPassFilter_t motorspeed_lowpass_R;
+float IMU_UpdateYaw(float left_speed, float right_speed, float gyro_z,float dt){
+    static float gyro_yaw = 0;
+    static float wheel_yaw = 0;
+    float error;
+    
+    left_speed = LowPass_Update(&motorspeed_lowpass_L, left_speed, 50,dt);
+    right_speed = LowPass_Update(&motorspeed_lowpass_R, right_speed, 50,dt);
+    float wheel_yaw_rate = WHEEL_RADIUS * (left_speed - right_speed) / WHEEL_TRACK;
 
-void IMU_PosCalculate(IMUData_TypeDef *imudata,float dt){
+    wheel_yaw += wheel_yaw_rate * dt;
+    gyro_yaw -= gyro_z * dt;
+
+    error = wheel_yaw - gyro_yaw;
+    gyro_yaw += 0.001f * error;
+    return gyro_yaw;
+}
+
+void IMU_PosCalculate(IMUData_TypeDef *imudata,float left_speed, float right_speed,float dt){
     float accel[3] = {0};
     float gyro[3] = {0};
     float euler_rad[3] = {0};
@@ -55,7 +75,8 @@ void IMU_PosCalculate(IMUData_TypeDef *imudata,float dt){
     Mahony_GetEuler(&mahonyfliter, euler_rad);
     imudata->roll = euler_rad[0] / PI * 180.0f;
     imudata->pitch = euler_rad[1] / PI * 180.0f;
-    imudata->yaw = euler_rad[2] / PI * 180.0f;
+    imudata->yaw = IMU_UpdateYaw(left_speed, right_speed, gyro[2],dt) / PI * 180.0f;
+    // imudata->yaw = euler_rad[2] / PI * 180.0f;
 }
 
 void IMU_TemperatureControl(IMUData_TypeDef *imudata, float set_temperature, float dt){

@@ -13,7 +13,8 @@ typedef struct{
 }IMUData_TypeDef;
 uint8_t IMU_Init(void);
 void IMU_RawDataGet(IMUData_TypeDef *imudata);
-void IMU_PosCalculate(IMUData_TypeDef *imudata, float dt);
+float IMU_UpdateYaw(float left_speed, float right_speed, float gyro_z,float dt);
+void IMU_PosCalculate(IMUData_TypeDef *imudata,float left_speed, float right_speed,float dt);
 void IMU_TemperatureControl(IMUData_TypeDef *imudata, float set_temperature, float dt);
 
 #endif
