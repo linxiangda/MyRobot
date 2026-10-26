@@ -1465,6 +1465,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\Task\vbus_task.h</FilePath>
             </File>
+            <File>
+              <FileName>control_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Task\control_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>control_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Task\control_task.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1479,6 +1489,26 @@
               <FileName>imu.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Module\imu.h</FilePath>
+            </File>
+            <File>
+              <FileName>wheel_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Module\wheel_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>wheel_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Module\wheel_control.h</FilePath>
+            </File>
+            <File>
+              <FileName>leg_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Module\leg_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>leg_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Module\leg_control.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1514,6 +1544,16 @@
               <FileName>PID.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Algorithm\PID.h</FilePath>
+            </File>
+            <File>
+              <FileName>LQR.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Algorithm\LQR.c</FilePath>
+            </File>
+            <File>
+              <FileName>LQR.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Algorithm\LQR.h</FilePath>
             </File>
           </Files>
         </Group>

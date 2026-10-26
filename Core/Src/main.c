@@ -44,6 +44,7 @@
 #include "remote_task.h"
 #include "can_task.h"
 #include "vbus_task.h"
+#include "control_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -189,6 +190,12 @@ int main(void)
   configASSERT(xReturn == pdPASS);
 
   xReturn = xTaskCreate(vUpperCanTask, "UpperCanTask", 256, NULL, 1, &UpperCanTaskHandle);
+  configASSERT(xReturn == pdPASS);
+
+  xReturn = xTaskCreate(vControlLegTask, "ControlLegTask", 256, NULL, 1, NULL);
+  configASSERT(xReturn == pdPASS);
+
+  xReturn = xTaskCreate(vControlWheelTask, "ControlWheelTask", 256, NULL, 1, NULL);
   configASSERT(xReturn == pdPASS);
 
   vTaskStartScheduler();

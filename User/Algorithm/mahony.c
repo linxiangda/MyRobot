@@ -147,9 +147,9 @@ void Mahony_GetEuler(const Mahony_t *filter, float euler_rad[3]){
     float z = filter->q[3];
 
     /* Roll */
-    euler_rad[0] = -atan2f(2.0f * (w * y - x * z), 1.0f - 2.0f * (x * x + y * y));
+    euler_rad[0] = atan2f(2.0f * (w * y - x * z), 1.0f - 2.0f * (x * x + y * y));
     /* Pitch */
-    euler_rad[1] = -asinf(Clamp(2.0f * (w * x + y * z), -1.0f, 1.0f));
+    euler_rad[1] = asinf(Clamp(2.0f * (w * x + y * z), -1.0f, 1.0f));
     /* Yaw */
-    euler_rad[2] = -atan2f(2.0f * (w * z - x * y), 1.0f - 2.0f * (x * x + z * z));
+    euler_rad[2] = atan2f(2.0f * (w * z - x * y), 1.0f - 2.0f * (x * x + z * z));
 }

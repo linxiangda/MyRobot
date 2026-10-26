@@ -10,6 +10,9 @@ typedef struct{
     float quaternion[4];
     float roll,pitch,yaw;
     uint8_t error;
+
+    float speed;
+    float position;
 }IMUData_TypeDef;
 uint8_t IMU_Init(void);
 void IMU_RawDataGet(IMUData_TypeDef *imudata);

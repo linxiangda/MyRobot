@@ -39,7 +39,7 @@ void print(const char *str){
 
 void vLOGTask(void *pvParameters){
     for (;;){
-        print_imulog();
+        // print_imulog();
         // print_motorlog();
         // print_vbuslog();
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -55,10 +55,15 @@ void print_imulog(void){
 
     len = snprintf(
             packet, sizeof(packet),
-            "%.4f,%.4f,%.4f,%.4f\n",
+            "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+            data.gyro[1],
+            data.gyro[0],
+            data.gyro[2],
             data.roll,
             data.pitch,
             data.yaw,
+            data.position,
+            data.speed,
             data.temperature);
 
     if (len > 0 && (size_t)len < sizeof(packet)){
