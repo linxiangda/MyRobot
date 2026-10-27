@@ -1,6 +1,11 @@
 #include "can_bsp.h"
 #include "fdcan.h"
 #include "string.h"
+
+#include "FreeRTOS.h"
+#include "semphr.h"
+extern SemaphoreHandle_t xCanTxMutex;
+
 /* CAN启动（配置CAN滤波器，开启CAN） */
 HAL_StatusTypeDef CAN_Start(FDCAN_HandleTypeDef *hfdcan,uint32_t rxID,uint32_t rxMask){
     FDCAN_FilterTypeDef filter;
@@ -37,11 +42,7 @@ HAL_StatusTypeDef CAN_Send_Data(FDCAN_HandleTypeDef *hfdcan,uint32_t txID, const
     if (txID > 0x7FF || len > 8 || data == NULL)
         return HAL_ERROR;
 
-    if (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
-        return HAL_BUSY;
-
     memcpy(buffer, data, len); //防止数据写入时，越界读取
-
     tx.Identifier = txID; //ID
     tx.IdType = FDCAN_STANDARD_ID; //标准帧
     tx.TxFrameType = FDCAN_DATA_FRAME; //数据帧
@@ -52,6 +53,20 @@ HAL_StatusTypeDef CAN_Send_Data(FDCAN_HandleTypeDef *hfdcan,uint32_t txID, const
     tx.TxEventFifoControl = FDCAN_NO_TX_EVENTS;//发送后不生成发送事件FIFO记录
     tx.MessageMarker = 0;//软件给报文设置的标记，用于在发送事件中识别报文；当前未启用发送事件，所以不用
 
-    return HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx, buffer);
+    /* 当前锁被占用退出 */
+    if (xSemaphoreTake(xCanTxMutex, pdMS_TO_TICKS(1)) != pdTRUE){
+        return HAL_BUSY;
+    }
+    HAL_StatusTypeDef result;
+    /* 当前FIFO0没空间退出 */
+    if (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0U) {
+        result = HAL_BUSY;
+    }
+    else {
+        result = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx, buffer);
+    }
+    /* 释放锁 */
+    xSemaphoreGive(xCanTxMutex);
+    return result;
 }
 

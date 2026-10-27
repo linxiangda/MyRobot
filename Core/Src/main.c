@@ -68,6 +68,8 @@
 MotorData_TypeDef motordata = {0};
 /* binarysemaphore */
 SemaphoreHandle_t xBuzzerSemphr = NULL;
+/* mutex */
+SemaphoreHandle_t xCanTxMutex = NULL;
 /* queue */
 QueueHandle_t xSerialQueue = NULL;
 QueueHandle_t xIMUQueue = NULL;
@@ -139,6 +141,9 @@ int main(void)
   /* binarysemaphore create */
   xBuzzerSemphr = xSemaphoreCreateBinary();
   configASSERT(xBuzzerSemphr != NULL);
+  /* mutex create */
+  xCanTxMutex = xSemaphoreCreateMutex();
+  configASSERT(xCanTxMutex != NULL);  
   /* queue create */
   xSerialQueue = xQueueCreate(10,sizeof(char *));
   configASSERT(xSerialQueue != NULL);
