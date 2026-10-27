@@ -13,6 +13,7 @@ typedef struct{
 
     float speed;
     float position;
+    uint32_t update_ms;
 }IMUData_TypeDef;
 uint8_t IMU_Init(void);
 void IMU_RawDataGet(IMUData_TypeDef *imudata);

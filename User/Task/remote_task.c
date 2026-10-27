@@ -18,9 +18,9 @@ void vRemoteTask(void *pvParameters){
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart,uint16_t Size){ // 每次串口空闲或者接收满缓存区触发中断，写入
 	if(huart == &huart1){
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
-		if(rxbuffer[0] == '1'){
-			HAL_GPIO_TogglePin(LED3_GPIO_Port,LED3_Pin);
-		}
+		// if(rxbuffer[0] == '1'){
+		// 	HAL_GPIO_TogglePin(LED3_GPIO_Port,LED3_Pin);
+		// }
 	}
 }
 

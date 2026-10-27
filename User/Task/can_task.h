@@ -10,6 +10,8 @@ typedef struct{
     uint8_t motor_error[4];
     uint8_t motor_calibrated[4];
     uint8_t motor_calibrating[4];
+    uint8_t motor_online[4];
+    uint32_t update_ms[4];
 }MotorData_TypeDef;
 
 

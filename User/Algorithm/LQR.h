@@ -6,6 +6,8 @@
 typedef struct {
     float state[6];
     float K[2][6];
+    float balance_out_limit;
+    float turn_out_limit;
     float left_torque;
     float right_torque;
 }LQR_t;

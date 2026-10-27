@@ -65,14 +65,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static const LEDBlink_TypeDef led1Blink = { // LED1
-	.LED_PORT = GPIOC,
-	.LED_PIN = GPIO_PIN_13,
-	.LED_Period = 1000,
-};
 MotorData_TypeDef motordata = {0};
 /* binarysemaphore */
-SemaphoreHandle_t xKeySemphr = NULL;
+SemaphoreHandle_t xBuzzerSemphr = NULL;
 /* queue */
 QueueHandle_t xSerialQueue = NULL;
 QueueHandle_t xIMUQueue = NULL;
@@ -96,9 +91,7 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void vTimerCallback(TimerHandle_t XTimer){
-	HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,GPIO_PIN_SET);
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -144,8 +137,8 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   /* binarysemaphore create */
-  xKeySemphr = xSemaphoreCreateBinary();
-  configASSERT(xKeySemphr != NULL);
+  xBuzzerSemphr = xSemaphoreCreateBinary();
+  configASSERT(xBuzzerSemphr != NULL);
   /* queue create */
   xSerialQueue = xQueueCreate(10,sizeof(char *));
   configASSERT(xSerialQueue != NULL);
@@ -158,14 +151,19 @@ int main(void)
   /* softtimer create*/
   xLEDTimer = xTimerCreate("LEDTimer",pdMS_TO_TICKS(2000),pdFALSE,NULL,vTimerCallback);
   configASSERT(xLEDTimer != NULL);
-  
+  /* eventgroup create */
+  xEventGroup = xEventGroupCreate();
+  configASSERT(xEventGroup != NULL);
   /* task create */
   BaseType_t xReturn;
   
   xReturn = xTaskCreate(vKeyTask,"KeyTask",128,NULL,2,NULL);
   configASSERT(xReturn == pdPASS);
   
-  xReturn = xTaskCreate(vLEDTask,"LED1Task",128,(void *)&led1Blink,2,NULL);
+  xReturn = xTaskCreate(vLED1Task,"LED1Task",128,NULL,2,NULL);
+  configASSERT(xReturn == pdPASS);
+
+  xReturn = xTaskCreate(vLED2Task,"LED2Task",128,NULL,2,NULL);
   configASSERT(xReturn == pdPASS);
   
   xReturn = xTaskCreate(vSerialGateKeeperTask,"SerialGateKeeperTask",128,NULL,2,NULL);

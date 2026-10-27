@@ -5,12 +5,15 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "event_groups.h"
 #include <string.h>
 
 extern TaskHandle_t MotorCanTaskHandle;
 extern TaskHandle_t UpperCanTaskHandle;
 extern MotorData_TypeDef motordata;
 extern QueueHandle_t xMotorQueue;
+
+extern EventGroupHandle_t xEventGroup;
 
 void  vMotorCanTask(void *pvParameters){
 	FDCAN_RxHeaderTypeDef header;
@@ -25,12 +28,16 @@ void  vMotorCanTask(void *pvParameters){
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		/* 读出全部报文 */
 		while (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 0){
-			HAL_FDCAN_GetRxMessage(&hfdcan1,FDCAN_RX_FIFO0,&header,data);
+			if(HAL_FDCAN_GetRxMessage(&hfdcan1,FDCAN_RX_FIFO0,&header,data) != HAL_OK) break;
 			if (header.IdType == FDCAN_STANDARD_ID &&
 				header.RxFrameType == FDCAN_DATA_FRAME &&
 				// header.Identifier == 0x200 &&
 				header.DataLength == FDCAN_DLC_BYTES_8)
 			{
+				if (!((header.Identifier >= 0x201U && header.Identifier <= 0x204U)
+					||(header.Identifier >= 0x211U && header.Identifier <= 0x214U))) {
+					continue;
+				}
 				if((header.Identifier & 0x0f0) == 0){
 					memcpy(&motordata.motor_iq[(header.Identifier & 0x00f)-1],&data[0],4);
 					memcpy(&motordata.motor_speed[(header.Identifier & 0x00f)-1],&data[4],4);
@@ -39,9 +46,11 @@ void  vMotorCanTask(void *pvParameters){
 					memcpy(&motordata.motor_position[(header.Identifier & 0x00f)-1],&data[0],4);
 					motordata.motor_mode[(header.Identifier & 0x00f)-1] = data[4];		
 					motordata.motor_error[(header.Identifier & 0x00f)-1] = data[5];	
-					motordata.motor_calibrated[(header.Identifier & 0x00f)-1] = data[6];	
-					motordata.motor_calibrating[(header.Identifier & 0x00f)-1] = data[7];	
+					motordata.motor_calibrated[(header.Identifier & 0x00f)-1] = (data[6] >> 1) & 0x01;	
+					motordata.motor_calibrating[(header.Identifier & 0x00f)-1] = data[6] & 0x01;	
+					motordata.motor_online[(header.Identifier & 0x00f)-1] = data[7];
 				}
+				motordata.update_ms[(header.Identifier & 0x00f)-1] = HAL_GetTick();
 
 				// HAL_StatusTypeDef result = CAN_Send_Data(&hfdcan2,0x101, data,sizeof(data));
 				// if (result == HAL_ERROR){
@@ -53,6 +62,20 @@ void  vMotorCanTask(void *pvParameters){
 			}
 		}
 		xQueueOverwrite(xMotorQueue, &motordata);
+		uint8_t data_pass = 1;
+		for(uint8_t i=0;i<4;i++){
+			if (motordata.motor_online[i] != 1 ||
+				motordata.motor_calibrated[i] != 1 ||
+				motordata.motor_calibrating[i] != 0) {
+					data_pass = 0;
+			}
+		}
+		if(data_pass == 1){
+			xEventGroupSetBits(xEventGroup, (1U << 2));
+		}
+		else{
+			xEventGroupClearBits(xEventGroup, (1U << 2));
+		}
     }
 
 }

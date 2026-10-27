@@ -27,16 +27,16 @@ void LQR_Compute(LQR_t *LQR)
     float balance = (output[0] + output[1]) * 0.5f;
     float turn = (output[0] - output[1]) * 0.5f;
 
-    balance = Clamp(balance, -0.3f, 0.3f);
+    balance = Clamp(balance, -LQR->balance_out_limit, LQR->balance_out_limit);
 
     float abs_balance = balance;
     if (abs_balance < 0.0f) {
         abs_balance = -abs_balance;
     }
 
-    float turn_limit = 0.3f - abs_balance;
-    if (turn_limit > 0.06f) {
-        turn_limit = 0.06f;
+    float turn_limit = LQR->balance_out_limit - abs_balance;
+    if (turn_limit > LQR->turn_out_limit) {
+        turn_limit = LQR->turn_out_limit;
     }
 
     turn = Clamp(turn, -turn_limit, turn_limit);

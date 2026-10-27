@@ -2,14 +2,12 @@
 #define _SERVICE_TASK_H_
 
 #include "main.h"
-
-typedef struct{
-	GPIO_TypeDef *LED_PORT;
-	uint16_t LED_PIN;
-	uint32_t LED_Period;
-}LEDBlink_TypeDef;
-
-void vLEDTask(void *pvParameters);
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+void vLED1Task(void *pvParameters);
+void vLED2Task(void *pvParameters);
+void vTimerCallback(TimerHandle_t XTimer);
 void vKeyTask(void *pvParameters);
 void vBuzzerTask(void *pvParameters);
 #endif

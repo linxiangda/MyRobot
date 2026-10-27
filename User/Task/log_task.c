@@ -56,11 +56,11 @@ void print_imulog(void){
     len = snprintf(
             packet, sizeof(packet),
             "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
-            data.gyro[1],
             data.gyro[0],
+            data.gyro[1],
             data.gyro[2],
-            data.roll,
             data.pitch,
+            data.roll,
             data.yaw,
             data.position,
             data.speed,
