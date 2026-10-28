@@ -75,6 +75,7 @@ QueueHandle_t xSerialQueue = NULL;
 QueueHandle_t xIMUQueue = NULL;
 QueueHandle_t xMotorQueue = NULL;
 QueueHandle_t xVbusQueue = NULL;
+QueueHandle_t xRemoteQueue = NULL;
 /* softtimer */
 TimerHandle_t xLEDTimer = NULL;
 /* eventgroup */
@@ -137,6 +138,7 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_TIM3_Init();
+  MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
   /* binarysemaphore create */
   xBuzzerSemphr = xSemaphoreCreateBinary();
@@ -153,6 +155,8 @@ int main(void)
   configASSERT(xMotorQueue != NULL);
   xVbusQueue = xQueueCreate(1, sizeof(float));
   configASSERT(xVbusQueue != NULL);
+  xRemoteQueue = xQueueCreate(1, sizeof(RemoteData_t));
+  configASSERT(xRemoteQueue != NULL);
   /* softtimer create*/
   xLEDTimer = xTimerCreate("LEDTimer",pdMS_TO_TICKS(2000),pdFALSE,NULL,vTimerCallback);
   configASSERT(xLEDTimer != NULL);
@@ -183,7 +187,10 @@ int main(void)
   xReturn = xTaskCreate(vLOGTask, "LogTask", 512, NULL, 2, NULL);
   configASSERT(xReturn == pdPASS);
   
-  xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 128, NULL, 1, NULL);
+  // xReturn = xTaskCreate(vSerialReceiveTask, "SerialReceive", 128, NULL, 2, NULL);
+  // configASSERT(xReturn == pdPASS);
+  
+  xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 256, NULL, 1, NULL);
   configASSERT(xReturn == pdPASS);
   
   xReturn = xTaskCreate(vVbusTask, "VbusTask", 128, NULL, 1, NULL);

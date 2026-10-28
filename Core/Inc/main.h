@@ -69,6 +69,16 @@ void Error_Handler(void);
 #define BMI088_ACC_CS_GPIO_Port GPIOC
 #define KEY_Pin GPIO_PIN_2
 #define KEY_GPIO_Port GPIOB
+#define NRF_CE_Pin GPIO_PIN_3
+#define NRF_CE_GPIO_Port GPIOD
+#define NRF_CSN_Pin GPIO_PIN_7
+#define NRF_CSN_GPIO_Port GPIOD
+#define NRF_SCK_Pin GPIO_PIN_3
+#define NRF_SCK_GPIO_Port GPIOB
+#define NRF_MISO_Pin GPIO_PIN_4
+#define NRF_MISO_GPIO_Port GPIOB
+#define NRF_MOSI_Pin GPIO_PIN_5
+#define NRF_MOSI_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

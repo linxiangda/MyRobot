@@ -1510,6 +1510,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\Module\leg_control.h</FilePath>
             </File>
+            <File>
+              <FileName>remote.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Module\remote.c</FilePath>
+            </File>
+            <File>
+              <FileName>remote.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Module\remote.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1570,6 +1580,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\Driver\bmi088_driver.h</FilePath>
             </File>
+            <File>
+              <FileName>nrf_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Driver\nrf_driver.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_driver.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Driver\nrf_driver.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1594,6 +1614,16 @@
               <FileName>can_bsp.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\BSP\can_bsp.h</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\BSP\nrf_bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_bsp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\BSP\nrf_bsp.h</FilePath>
             </File>
           </Files>
         </Group>

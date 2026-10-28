@@ -28,6 +28,7 @@ void  vSerialGateKeeperTask(void *pvParameters){
 		vPortFree(pMemory);
 	}
 }
+
 void print(const char *str){
 	char *pMemory = pvPortMalloc(strlen(str)+1);
 	
@@ -45,6 +46,25 @@ void vLOGTask(void *pvParameters){
         vTaskDelay(pdMS_TO_TICKS(10));
 
     }
+}
+uint8_t rxbuffer[5];
+void vSerialReceiveTask(void *pvParameters){
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
+//	HAL_UART_Receive_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
+	for(;;){
+		vTaskDelay(pdMS_TO_TICKS(10));
+
+	}
+	
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart,uint16_t Size){ // 每次串口空闲或者接收满缓存区触发中断，写入
+	if(huart == &huart1){
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
+		// if(rxbuffer[0] == '1'){
+		// 	HAL_GPIO_TogglePin(LED3_GPIO_Port,LED3_Pin);
+		// }
+	}
 }
 
 void print_imulog(void){

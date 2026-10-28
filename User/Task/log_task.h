@@ -5,4 +5,5 @@
 void print(const char *str);
 void  vSerialGateKeeperTask(void *pvParameters);
 void vLOGTask(void *pvParameters);
+void vSerialReceiveTask(void *pvParameters);
 #endif
