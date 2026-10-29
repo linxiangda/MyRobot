@@ -1,6 +1,7 @@
 #include "control_task.h"
 #include "imu_task.h"
 #include "can_task.h"
+#include "remote_task.h"
 #include "log_task.h"
 
 #include "wheel_control.h"
@@ -29,7 +30,17 @@ void vControlLegTask(void *pvParameters){
     static MotorData_TypeDef Motordata;
     TickType_t period = pdMS_TO_TICKS(5);
     TickType_t last_wake = xTaskGetTickCount();
+
+    RemoteData_t remote = {0};
 	for(;;){
+        if (xQueuePeek(xRemoteQueue, &remote, 0) != pdTRUE
+            || (uint32_t)(HAL_GetTick() - remote.update_ms) >= 300
+            || !remote.online){
+            remote.online = 0;
+            remote.speed_set = 0.0f;
+            remote.yaw_rate_set = 0.0f;
+        }
+
         /* 读取失败，取消按键使能 */
         if (xQueuePeek(xIMUQueue, &IMUdata, 0) != pdTRUE || xQueuePeek(xMotorQueue, &Motordata, 0) != pdTRUE){
             xEventGroupClearBits(xEventGroup, 1U);
@@ -42,12 +53,13 @@ void vControlLegTask(void *pvParameters){
             }
 
             for (uint8_t i = 0; i < 4; i++) {
-                if ((uint32_t)(now - Motordata.update_ms[i]) > 50) {
+                if ((uint32_t)(now - Motordata.update_ms[i]) > 500) {
                     xEventGroupClearBits(xEventGroup, 1U);
                     break;
                 }
             }
         }
+
         /* 倾角过大，取消按键使能 */
         const float pitch_limit = 20.0f * 3.1415926f / 180.0f;
         if (fabsf(IMUdata.pitch - 0.002f) > pitch_limit) {
@@ -74,13 +86,13 @@ void vControlLegTask(void *pvParameters){
             continue;
         }
 
-        float left_torque,right_torque;
+        // float left_torque,right_torque;
 
         // float left_current  = -left_torque  / LEG_Torque_constant;
         // float right_current = -right_torque / LEG_Torque_constant;
 
-        float left_position  = 0.3;
-        float right_position = 0.3;
+        float left_position  = remote.leg_angle_set;
+        float right_position = remote.leg_angle_set;
 
         uint8_t left_wheel_data[8]  = {0};
         uint8_t right_wheel_data[8] = {0};
@@ -112,9 +124,20 @@ void vControlWheelTask(void *pvParameters){
     TickType_t period = pdMS_TO_TICKS(5);
     TickType_t last_wake = xTaskGetTickCount();
     uint8_t was_enabled = 0;// 使能一次执行一次
+    uint8_t remote_was_online = 0;// 从在线到掉线执行一次
     float position_ref = 0.0f;
     float yaw_ref = 0.0f;
+
+    RemoteData_t remote = {0};
 	for(;;){
+        if (xQueuePeek(xRemoteQueue, &remote, 0) != pdTRUE      
+            || (uint32_t)(HAL_GetTick() - remote.update_ms) >= 300
+            || !remote.online){
+            remote.online = 0;
+            remote.speed_set = 0.0f;
+            remote.yaw_rate_set = 0.0f;
+        }
+  
         /* 读取失败，取消按键使能 */
         if (xQueuePeek(xIMUQueue, &IMUdata, 0) != pdTRUE || xQueuePeek(xMotorQueue, &Motordata, 0) != pdTRUE){
             xEventGroupClearBits(xEventGroup, 1U);
@@ -127,7 +150,7 @@ void vControlWheelTask(void *pvParameters){
             }
 
             for (uint8_t i = 0; i < 4; i++) {
-                if ((uint32_t)(now - Motordata.update_ms[i]) > 50) {
+                if ((uint32_t)(now - Motordata.update_ms[i]) > 500) {
                     xEventGroupClearBits(xEventGroup, 1U);
                     break;
                 }
@@ -160,19 +183,24 @@ void vControlWheelTask(void *pvParameters){
             continue;
         }
 
-        /* 使能首次赋值当前位置和偏航 */
-        if (was_enabled == 0){
+        /* 使能首次/遥控断线,赋值当前位置和偏航 */
+        if (was_enabled == 0 || (remote_was_online && !remote.online)){
             position_ref = IMUdata.position;
             yaw_ref = IMUdata.yaw;
             was_enabled = 1;
         }
+        remote_was_online = remote.online;
+
+        position_ref += remote.speed_set * 0.005f;
+        yaw_ref      += remote.yaw_rate_set * 0.005f;
+
         float state[6] = {
             IMUdata.position - position_ref,   
-            IMUdata.speed - 0.0f,          
+            IMUdata.speed - remote.speed_set,          
             IMUdata.pitch - 0.002f,       
             IMUdata.gyro[0] - 0.0f,                
             IMUdata.yaw - yaw_ref,             
-            IMUdata.gyro[2] - 0.0f    
+            IMUdata.gyro[2] - remote.yaw_rate_set    
         };
         float left_torque,right_torque;
         Wheel_Control(state, &left_torque, &right_torque);

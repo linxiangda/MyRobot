@@ -9,14 +9,16 @@
 #define REMOTE_MAX_LEG_ANGLE_RAD   0.56199602f
 #define REMOTE_DATA_TIMEOUT_MS    300U
 
-/* Public queue item. Physical units; enable is a RUN REQUEST, not motor state.
- * Ignore all targets if disabled/offline/stale. Controller owns fault handling. */
+/* Public queue item. Targets are independent of the enable switch.
+ * Offline/invalid inputs: zero speed/yaw rate, hold last valid leg angle.
+ * Before the first valid input use REMOTE_DEFAULT_LEG_ANGLE_RAD.
+ * Controller owns fault handling and must check queue freshness as well. */
 typedef struct {
-    float speed_mps;          /* right stick forward/back: -0.3..0.3 */
-    float yaw_rate_rad_s;     /* right stick left/right: -1..1 */
-    float leg_angle_rad;      /* left non-return axis: 0..0.56199602 */
-    uint8_t enable;
-    uint8_t online;
+    float speed_set;          /* right stick forward/back: -0.3..0.3 m/s */
+    float yaw_rate_set;       /* right stick left/right: -1..1 rad/s */
+    float leg_angle_set;      /* left non-return axis: 0..0.56199602 rad */
+    uint8_t enable;           /* Actual event-group bit0, informational only. */
+    uint8_t online;           /* Radio link, not the robot enable state. */
     uint32_t update_ms;       /* last valid radio packet, HAL_GetTick() */
 } RemoteData_t;
 
