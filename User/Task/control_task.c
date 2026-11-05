@@ -25,12 +25,25 @@ extern QueueHandle_t xIMUQueue;
 extern QueueHandle_t xMotorQueue;
 extern EventGroupHandle_t xEventGroup;
 
+uint16_t float_to_uint(float x, float x_min, float x_max, uint8_t bits){
+    if(x > x_max) x = x_max;
+    if(x < x_min) x = x_min;
+    float span = x_max - x_min;
+    float offset = x - x_min;
+    if(span < 1e-6f) return 0;
+    uint16_t max_int = (1 << bits) - 1;
+    return (uint16_t)((offset / span) * (float)max_int +0.5f);
+}
+
 void vControlLegTask(void *pvParameters){	
     static IMUData_TypeDef IMUdata;
     static MotorData_TypeDef Motordata;
     TickType_t period = pdMS_TO_TICKS(5);
     TickType_t last_wake = xTaskGetTickCount();
-
+    uint8_t was_enabled = 0;// 使能一次执行一次
+    uint8_t remote_was_online = 0;// 从在线到掉线执行一次   
+    float left_p_ref = 0;
+    float right_p_ref = 0;
     RemoteData_t remote = {0};
 	for(;;){
         if (xQueuePeek(xRemoteQueue, &remote, 0) != pdTRUE
@@ -81,29 +94,66 @@ void vControlLegTask(void *pvParameters){
             CAN_Send_Data(&hfdcan1, 0x101, stop_data, 8);
             CAN_Send_Data(&hfdcan1, 0x103, stop_data, 8);
 
+            was_enabled = 0;
             vTaskDelay(period);
             last_wake = xTaskGetTickCount();
             continue;
         }
+        /* 使能首次/遥控断线,赋值当前位置和偏航 */
+        if (was_enabled == 0 || (remote_was_online && !remote.online)){
+            left_p_ref = Motordata.motor_position[0];
+            right_p_ref = Motordata.motor_position[2];
+            was_enabled = 1;
+        }
+        remote_was_online = remote.online;
 
-        // float left_torque,right_torque;
+        float left_p_set,left_v_set = 0,left_kp = 50,left_kd = 0.005,left_tff = 0;
+        float right_p_set,right_v_set = 0,right_kp = 50,right_kd = 0.005,right_tff = 0;
+        
+        float max_step = 0.3f * 0.005f;
+        float left_delta = remote.leg_angle_set - left_p_ref;
+        float right_delta = remote.leg_angle_set - right_p_ref;
+        if (left_delta > max_step)  left_delta = max_step;
+        if (left_delta < -max_step) left_delta = -max_step;
+        if (right_delta > max_step)  right_delta = max_step;
+        if (right_delta < -max_step) right_delta = -max_step;
+        left_p_ref += left_delta;
+        right_p_ref += right_delta;
+        left_p_set  = left_p_ref;
+        right_p_set = right_p_ref;
 
-        // float left_current  = -left_torque  / LEG_Torque_constant;
-        // float right_current = -right_torque / LEG_Torque_constant;
+        uint8_t left_leg_data[8]  = {0};
+        uint8_t right_leg_data[8] = {0};
 
-        float left_position  = remote.leg_angle_set;
-        float right_position = remote.leg_angle_set;
+        uint16_t left_p_int = float_to_uint(left_p_set, -12.5f, 12.5f, 16);
+        uint16_t right_p_int = float_to_uint(right_p_set, -12.5f, 12.5f, 16);
 
-        uint8_t left_wheel_data[8]  = {0};
-        uint8_t right_wheel_data[8] = {0};
-        uint32_t mode = 3;
-        memcpy(&left_wheel_data[0],  &mode, sizeof(mode));
-        memcpy(&right_wheel_data[0], &mode, sizeof(mode));
-        memcpy(&left_wheel_data[4],&left_position,sizeof(left_position));
-        memcpy(&right_wheel_data[4],&right_position,sizeof(right_position));
+        uint16_t left_v_int = float_to_uint(left_v_set, -45.0f, 45.0f, 12);
+        uint16_t right_v_int = float_to_uint(right_v_set, -45.0f, 45.0f, 12);
 
-        CAN_Send_Data(&hfdcan1,0x101, left_wheel_data,8);
-        CAN_Send_Data(&hfdcan1,0x103, right_wheel_data,8);
+        uint16_t left_kp_int = float_to_uint(left_kp, 0.0f, 500.0f, 12);
+        uint16_t right_kp_int = float_to_uint(right_kp, 0.0f, 500.0f, 12);
+
+        uint16_t left_kd_int = float_to_uint(left_kd, 0.0f, 5.0f, 12);
+        uint16_t right_kd_int = float_to_uint(right_kd, 0.0f, 5.0f, 12);
+
+        uint16_t left_tff_int = float_to_uint(left_tff, -18.0f, 18.0f, 12);
+        uint16_t right_tff_int = float_to_uint(right_tff, -18.0f, 18.0f, 12);
+
+        uint64_t leftpack = (uint64_t)left_tff_int
+                  | ((uint64_t)left_kd_int  << 12)
+                  | ((uint64_t)left_kp_int  << 24)
+                  | ((uint64_t)left_v_int   << 36)
+                  | ((uint64_t)left_p_int   << 48);
+        uint64_t rightpack = (uint64_t)right_tff_int
+                  | ((uint64_t)right_kd_int  << 12)
+                  | ((uint64_t)right_kp_int  << 24)
+                  | ((uint64_t)right_v_int   << 36)
+                  | ((uint64_t)right_p_int   << 48);
+        memcpy(left_leg_data, &leftpack, 8);
+        memcpy(right_leg_data, &rightpack, 8);
+        CAN_Send_Data(&hfdcan1,0x111, left_leg_data,8);
+        CAN_Send_Data(&hfdcan1,0x113, right_leg_data,8);
         // char packet[32];
         // int len;
         // len = snprintf(packet, sizeof(packet),"%.4f,%.4f\n",left_torque,right_torque);

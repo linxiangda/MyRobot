@@ -14,7 +14,7 @@ extern QueueHandle_t xVbusQueue;
 extern QueueHandle_t xMotorQueue;
 extern EventGroupHandle_t xEventGroup;
 
-/* Only this task owns the radio-command acknowledgement. */
+/* 无线开关指令的确认状态只由本任务维护。 */
 static uint32_t command_session;
 static uint16_t command_ack;
 static uint8_t command_ack_valid;
@@ -31,11 +31,10 @@ static uint8_t CanEnableRobot(void)
     uint32_t now = HAL_GetTick();
     const EventBits_t ready = (1U << 1) | (1U << 2);
     if ((xEventGroupGetBits(xEventGroup) & ready) != ready ||
-        xIMUQueue == NULL || xMotorQueue == NULL ||
         xQueuePeek(xIMUQueue, &imu, 0) != pdTRUE ||
         xQueuePeek(xMotorQueue, &motor, 0) != pdTRUE) return 0;
-    /* Match the existing controller's 20ms IMU, 500ms motor, 20deg limits.
-     * The <= form also rejects NaN/Inf pitch instead of enabling on them. */
+    /* 沿用控制层的有效条件：IMU 不超过 20ms、电机不超过 500ms、倾角不超过 20°。
+     * 使用“小于等于”判断，同时拒绝 NaN 和无穷大的倾角。 */
     if (imu.error || (uint32_t)(now - imu.update_ms) > 20U ||
         !(fabsf(imu.pitch - 0.002f) <= 20.0f * 3.1415926f / 180.0f)) return 0;
     for (uint8_t i = 0; i < 4; i++) {
@@ -64,13 +63,12 @@ static void HandleSwitchCommand(const RemoteFrame_t *frame)
     } else if (frame->input_valid && CanEnableRobot()) {
         xEventGroupSetBits(xEventGroup, 1U);
     }
-    /* Rejected ON requests are processed too: retransmitting that command
-     * must not automatically enable the robot after the fault clears. */
+    /* 被拒绝的开启请求也记录为已处理，避免故障解除后因旧指令重发而自动使能。 */
     command_ack = frame->command_sequence;
     command_ack_valid = 1;
 }
 
-/* Protocol/channel details stay here; the controller sees physical targets. */
+/* 本层将协议通道转换为实际控制目标，控制任务不必了解报文字节布局。 */
 static void MakeQueueData(const RemoteFrame_t *frame, RemoteData_t *data)
 {
     data->speed_set = 0.0f;
@@ -79,8 +77,7 @@ static void MakeQueueData(const RemoteFrame_t *frame, RemoteData_t *data)
     data->online = frame->online &&
         (uint32_t)(HAL_GetTick() - frame->update_ms) < REMOTE_DATA_TIMEOUT_MS;
     data->update_ms = frame->update_ms;
-    /* Preserve data->leg_angle_set on disconnect/invalid input. The run
-     * switch is independent: valid targets are published even when disabled. */
+    /* 断线或输入无效时保留上一次腿角；运行开关独立处理，未使能时仍发布有效目标。 */
     if (!data->online || !frame->input_valid) return;
     data->speed_set = frame->channel[1] * 0.001f * REMOTE_MAX_SPEED_MPS;
     data->yaw_rate_set = frame->channel[0] * 0.001f * REMOTE_MAX_YAW_RATE_RAD_S;
@@ -95,9 +92,9 @@ static void ReadTelemetry(RemoteTelemetry_t *telemetry)
     telemetry->command_session = command_session;
     telemetry->command_ack = command_ack;
     telemetry->command_ack_valid = command_ack_valid;
-    if (xVbusQueue != NULL && xQueuePeek(xVbusQueue, &telemetry->voltage_v, 0) == pdTRUE)
+    if (xQueuePeek(xVbusQueue, &telemetry->voltage_v, 0) == pdTRUE)
         telemetry->valid |= 1U;
-    if (xIMUQueue != NULL && xQueuePeek(xIMUQueue, &imu, 0) == pdTRUE &&
+    if (xQueuePeek(xIMUQueue, &imu, 0) == pdTRUE &&
         imu.error == 0 && (uint32_t)(HAL_GetTick() - imu.update_ms) <= 100U) {
         telemetry->roll_deg = imu.roll * RAD_TO_DEG;
         telemetry->pitch_deg = imu.pitch * RAD_TO_DEG;
@@ -116,9 +113,7 @@ void vRemoteTask(void *pvParameters)
     (void)pvParameters;
     configASSERT(xRemoteQueue != NULL);
     configASSERT(xEventGroup != NULL);
-    if (xRemoteQueue == NULL || xEventGroup == NULL) {
-        for (;;) vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    configASSERT(xIMUQueue != NULL && xMotorQueue != NULL && xVbusQueue != NULL);
     xQueueOverwrite(xRemoteQueue, &data);
 
     for (;;) {

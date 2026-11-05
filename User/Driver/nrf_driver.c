@@ -14,7 +14,7 @@ static uint8_t ready;
 static uint8_t transmitting;
 static uint32_t tx_start_ms;
 
-/* Always release CSN, including SPI failures. */
+/* 包括 SPI 失败时，也必须释放片选 CSN。 */
 static uint8_t Transaction(uint8_t command, const uint8_t *tx,
                            uint8_t *rx, uint8_t length)
 {
@@ -67,17 +67,17 @@ uint8_t NRF_Init(void)
     uint8_t value;
     ready = transmitting = 0;
     BSP_NRF_Init();
-    /* Caller handles retry waits with FreeRTOS; these are startup waits only. */
+    /* 重试等待由任务使用 FreeRTOS 延时处理；这里仅用于上电等待。 */
     BSP_NRF_DelayMs(20);
-    if (WriteReg(REG_CONFIG, 0x0CU) || /* power down, CRC16 */
-        WriteReg(0x01, 0x00) ||       /* no automatic ACK */
-        WriteReg(0x02, 0x01) ||       /* only RX pipe 0 */
-        WriteReg(0x03, 0x03) ||       /* 5-byte addresses */
-        WriteReg(0x04, 0x00) ||       /* no automatic retries */
+    if (WriteReg(REG_CONFIG, 0x0CU) || /* 掉电模式，启用 16 位 CRC */
+        WriteReg(0x01, 0x00) ||       /* 关闭自动应答 */
+        WriteReg(0x02, 0x01) ||       /* 仅开启接收通道 0 */
+        WriteReg(0x03, 0x03) ||       /* 使用 5 字节地址 */
+        WriteReg(0x04, 0x00) ||       /* 关闭自动重发 */
         WriteReg(0x05, NRF_RF_CHANNEL) ||
-        WriteReg(0x06, 0x06) ||       /* 1Mbps, 0dBm */
+        WriteReg(0x06, 0x06) ||       /* 无线速率 1Mbps，发射功率 0dBm */
         WriteReg(0x11, NRF_PACKET_SIZE) ||
-        WriteReg(0x1C, 0x00) ||       /* fixed payloads */
+        WriteReg(0x1C, 0x00) ||       /* 固定报文长度 */
         WriteReg(0x1D, 0x00) ||
         Transaction(0x2A, rx_address, NULL, 5) ||
         Transaction(0x30, tx_address, NULL, 5) ||
@@ -107,7 +107,7 @@ uint8_t NRF_Receive(uint8_t data[NRF_PACKET_SIZE])
     uint8_t fifo;
     if (!ready || data == NULL) return NRF_ERROR;
     if (transmitting) return NRF_BUSY;
-    /* Poll FIFO rather than RX_DR, so queued packets cannot be missed. */
+    /* 通过接收 FIFO 判断是否有数据，避免仅检查中断标志时漏读积压报文。 */
     if (ReadReg(0x17, &fifo) || fifo == 0xFFU) goto failed;
     if (fifo & 0x01U) return NRF_EMPTY;
     if (Transaction(0x61, NULL, data, NRF_PACKET_SIZE) ||

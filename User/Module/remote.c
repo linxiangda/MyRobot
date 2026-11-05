@@ -5,10 +5,9 @@
 #include <math.h>
 #include <float.h>
 
+/* session 非零表示已注册，online 非零表示已经收到有效控制序号。 */
 static RemoteFrame_t state;
 static uint8_t initialized;
-static uint8_t registered;
-static uint8_t have_sequence;
 static uint8_t reply_type;
 static uint8_t sending;
 static uint32_t reply_ms;
@@ -60,7 +59,7 @@ static int16_t ScaledAngle(float value)
 static void DropLink(void)
 {
     memset(&state, 0, sizeof(state));
-    registered = have_sequence = reply_type = 0;
+    reply_type = 0;
 }
 
 static uint8_t Decode(const uint8_t *packet)
@@ -75,19 +74,18 @@ static uint8_t Decode(const uint8_t *packet)
     session = ReadU32(packet + 22);
     if (session == 0) return 1;
     if (packet[3] == REMOTE_TYPE_REGISTER) {
-        if (!registered || session != state.session) {
+        if (session != state.session) {
             DropLink();
             state.session = session;
-            registered = 1;
             register_ms = now;
         }
-        /* Same-session retries only repeat the ACK; never reset commands. */
+        /* 同一会话的注册重试只重复回复确认，不重置控制指令。 */
         reply_type = REMOTE_TYPE_REGISTER_ACK;
         reply_sequence = seq;
         reply_ms = now;
         return 0;
     }
-    if (packet[3] != REMOTE_TYPE_CONTROL || !registered ||
+    if (packet[3] != REMOTE_TYPE_CONTROL ||
         session != state.session || packet[16] > 1 ||
         packet[17] > 1 || packet[20] > 1) return 1;
     for (uint8_t i = 0; i < 4; i++) {
@@ -95,32 +93,24 @@ static uint8_t Decode(const uint8_t *packet)
         if (channels[i] < -1000 || channels[i] > 1000) return 1;
     }
     if (channels[3] < 0) return 1;
-    if (have_sequence) {
-        uint16_t delta = (uint16_t)(seq - state.sequence);
-        if (delta >= 32768U) return 1;
-        if (delta == 0) {
-            /* Duplicate packets may get another reply, but cannot refresh
-             * the watchdog, replace targets or cause another switch action. */
-            reply_type = REMOTE_TYPE_STATUS;
-            reply_sequence = seq;
-            reply_ms = now;
-            return 0;
+    uint16_t delta = (uint16_t)(seq - state.sequence);
+    if (state.online && delta >= 32768U) return 1;
+    /* 重复报文仍然回复，但不刷新失联计时。 */
+    if (!state.online || delta != 0) {
+        memcpy(state.channel, channels, sizeof(channels));
+        state.buttons = ReadU16(packet + 14);
+        state.enable = packet[16];
+        state.command_valid = packet[17];
+        state.command_sequence = ReadU16(packet + 18);
+        state.input_valid = packet[20];
+        if (!state.input_valid) {
+            memset(state.channel, 0, sizeof(state.channel));
+            state.buttons = 0;
         }
+        state.sequence = seq;
+        state.update_ms = now;
+        state.online = 1;
     }
-    memcpy(state.channel, channels, sizeof(channels));
-    state.buttons = ReadU16(packet + 14);
-    state.enable = packet[16];
-    state.command_valid = packet[17];
-    state.command_sequence = ReadU16(packet + 18);
-    state.input_valid = packet[20];
-    if (!state.input_valid) {
-        memset(state.channel, 0, sizeof(state.channel));
-        state.buttons = 0;
-    }
-    state.sequence = seq;
-    state.update_ms = now;
-    state.online = 1;
-    have_sequence = 1;
     reply_type = REMOTE_TYPE_STATUS;
     reply_sequence = seq;
     reply_ms = now;
@@ -149,8 +139,7 @@ static void Encode(uint8_t *packet, const RemoteTelemetry_t *telemetry)
         packet[16] &= (uint8_t)~2U;
     PutU16(packet + 8, (uint16_t)ScaledAngle(telemetry->roll_deg));
     PutU16(packet + 10, (uint16_t)ScaledAngle(telemetry->pitch_deg));
-    /* Integrated yaw can exceed one revolution. Report a wrapped heading
-     * instead of clipping it at the int16 centidegree limit. */
+    /* 积分航向可能超过一圈，先回绕到 ±180°，避免按百分之一度编码时被整数范围截断。 */
     float yaw = 0.0f;
     if (Finite(telemetry->yaw_deg)) {
         yaw = fmodf(telemetry->yaw_deg, 360.0f);
@@ -181,9 +170,8 @@ uint8_t Remote_Update(RemoteFrame_t *frame, const RemoteTelemetry_t *telemetry)
 {
     uint8_t packet[NRF_PACKET_SIZE];
     uint8_t result;
-    if (frame == NULL || telemetry == NULL) return 1;
     if (!initialized) { memset(frame, 0, sizeof(*frame)); return 1; }
-    if (registered && (uint32_t)(HAL_GetTick() -
+    if (state.session && (uint32_t)(HAL_GetTick() -
         (state.online ? state.update_ms : register_ms)) >= REMOTE_TIMEOUT_MS)
         DropLink();
     if (sending) {
@@ -192,13 +180,12 @@ uint8_t Remote_Update(RemoteFrame_t *frame, const RemoteTelemetry_t *telemetry)
         if (result != NRF_OK) goto failed;
         sending = 0;
     }
-    /* The hardware RX FIFO holds three packets. Keep work per call bounded. */
+    /* 硬件接收 FIFO 最多保存三包，每次调用限制读取数量。 */
     for (uint8_t i = 0; i < 3; i++) {
         result = NRF_Receive(packet);
         if (result == NRF_EMPTY) break;
         if (result != NRF_OK) goto failed;
-        /* Give the task a chance to apply each new command before replying.
-         * This also prevents two queued switch commands collapsing into one. */
+        /* 收到新指令后先返回任务处理，再发送回复，避免积压的开关指令合并丢失。 */
         if (Decode(packet) == 0) goto done;
     }
     if (reply_type && (uint32_t)(HAL_GetTick() - reply_ms) >= 2U) {

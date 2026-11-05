@@ -139,6 +139,7 @@ int main(void)
   MX_FDCAN3_Init();
   MX_TIM3_Init();
   MX_SPI3_Init();
+  MX_UART8_Init();
   /* USER CODE BEGIN 2 */
   /* binarysemaphore create */
   xBuzzerSemphr = xSemaphoreCreateBinary();
@@ -169,10 +170,10 @@ int main(void)
   xReturn = xTaskCreate(vKeyTask,"KeyTask",128,NULL,2,NULL);
   configASSERT(xReturn == pdPASS);
   
-  xReturn = xTaskCreate(vLED1Task,"LED1Task",128,NULL,2,NULL);
+  xReturn = xTaskCreate(vLED1Task,"LED1Task",128,NULL,1,NULL);
   configASSERT(xReturn == pdPASS);
 
-  xReturn = xTaskCreate(vLED2Task,"LED2Task",128,NULL,2,NULL);
+  xReturn = xTaskCreate(vLED2Task,"LED2Task",128,NULL,1,NULL);
   configASSERT(xReturn == pdPASS);
   
   xReturn = xTaskCreate(vSerialGateKeeperTask,"SerialGateKeeperTask",128,NULL,2,NULL);
@@ -184,13 +185,13 @@ int main(void)
   xReturn = xTaskCreate(vIMUTask,"IMUTask",128,NULL,2,NULL);
   configASSERT(xReturn == pdPASS);
   
-  xReturn = xTaskCreate(vLOGTask, "LogTask", 512, NULL, 2, NULL);
+  xReturn = xTaskCreate(vLOGTask, "LogTask", 512, NULL, 1, NULL);
   configASSERT(xReturn == pdPASS);
   
   // xReturn = xTaskCreate(vSerialReceiveTask, "SerialReceive", 128, NULL, 2, NULL);
   // configASSERT(xReturn == pdPASS);
   
-  xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 256, NULL, 1, NULL);
+  xReturn = xTaskCreate(vRemoteTask, "RemoteTask", 256, NULL, 3, NULL);
   configASSERT(xReturn == pdPASS);
   
   xReturn = xTaskCreate(vVbusTask, "VbusTask", 128, NULL, 1, NULL);
@@ -199,13 +200,13 @@ int main(void)
   xReturn = xTaskCreate(vMotorCanTask, "MotorCanTask", 256, NULL, 1, &MotorCanTaskHandle);
   configASSERT(xReturn == pdPASS);
 
-  xReturn = xTaskCreate(vUpperCanTask, "UpperCanTask", 256, NULL, 1, &UpperCanTaskHandle);
+  xReturn = xTaskCreate(vUpperCanTask, "UpperCanTask", 256, NULL, 2, &UpperCanTaskHandle);
   configASSERT(xReturn == pdPASS);
 
-  xReturn = xTaskCreate(vControlLegTask, "ControlLegTask", 256, NULL, 1, NULL);
+  xReturn = xTaskCreate(vControlLegTask, "ControlLegTask", 256, NULL, 2, NULL);
   configASSERT(xReturn == pdPASS);
 
-  xReturn = xTaskCreate(vControlWheelTask, "ControlWheelTask", 256, NULL, 1, NULL);
+  xReturn = xTaskCreate(vControlWheelTask, "ControlWheelTask", 256, NULL, 2, NULL);
   configASSERT(xReturn == pdPASS);
 
   vTaskStartScheduler();

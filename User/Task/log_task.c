@@ -24,7 +24,7 @@ void  vSerialGateKeeperTask(void *pvParameters){
 	char *pMemory;
 	for(;;){
 		xQueueReceive(xSerialQueue,&pMemory,portMAX_DELAY);
-		HAL_UART_Transmit(&huart1,(const uint8_t *)pMemory,(uint16_t)strlen((char *)pMemory),1000);
+		HAL_UART_Transmit(&huart8,(const uint8_t *)pMemory,(uint16_t)strlen((char *)pMemory),1000);
 		vPortFree(pMemory);
 	}
 }
@@ -41,7 +41,7 @@ void print(const char *str){
 void vLOGTask(void *pvParameters){
     for (;;){
         // print_imulog();
-        // print_motorlog();
+        print_motorlog();
         // print_vbuslog();
         vTaskDelay(pdMS_TO_TICKS(10));
 
@@ -49,8 +49,8 @@ void vLOGTask(void *pvParameters){
 }
 uint8_t rxbuffer[5];
 void vSerialReceiveTask(void *pvParameters){
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
-//	HAL_UART_Receive_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart8,rxbuffer,sizeof(rxbuffer));
+//	HAL_UART_Receive_DMA(&huart8,rxbuffer,sizeof(rxbuffer));
 	for(;;){
 		vTaskDelay(pdMS_TO_TICKS(10));
 
@@ -59,8 +59,8 @@ void vSerialReceiveTask(void *pvParameters){
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart,uint16_t Size){ // 每次串口空闲或者接收满缓存区触发中断，写入
-	if(huart == &huart1){
-		HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rxbuffer,sizeof(rxbuffer));
+	if(huart == &huart8){
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart8,rxbuffer,sizeof(rxbuffer));
 		// if(rxbuffer[0] == '1'){
 		// 	HAL_GPIO_TogglePin(LED3_GPIO_Port,LED3_Pin);
 		// }

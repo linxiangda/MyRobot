@@ -27,12 +27,12 @@ void vIMUTask(void *pvParameters)
     for (;;) {
         IMU_RawDataGet(&IMUdata);   
         xQueuePeek(xMotorQueue,&Motordata,0);
-        float left_speed = Motordata.motor_speed[1];
-        float right_speed = Motordata.motor_speed[3];
+        float left_speed = -Motordata.motor_speed[1];
+        float right_speed = -Motordata.motor_speed[3];
         left_speed = LowPass_Update(&motorspeed_lowpass_L, left_speed, 50,0.001f);
         right_speed = LowPass_Update(&motorspeed_lowpass_R, right_speed, 50,0.001f);
 
-        IMUdata.speed = wheel_radius*((Motordata.motor_speed[1] + Motordata.motor_speed[3]) * 0.5f + IMUdata.gyro[0]);
+        IMUdata.speed = wheel_radius*((left_speed + right_speed) * 0.5f + IMUdata.gyro[0]);
         IMUdata.position += IMUdata.speed * 0.001f;
         if (IMUdata.error == 0) {
             IMU_PosCalculate(&IMUdata,left_speed,right_speed,0.001);

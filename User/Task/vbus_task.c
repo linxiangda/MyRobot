@@ -10,6 +10,7 @@ extern QueueHandle_t xVbusQueue;
 void vVbusTask(void *pvParameters){
 	static volatile uint32_t adcValue = 0;
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adcValue, 1);	
+	__HAL_DMA_DISABLE_IT(hadc1.DMA_Handle, DMA_IT_HT | DMA_IT_TC);
 	for(;;){
 		float voltage = adcValue / 4095.0f * 3.3f * 11.0f * 0.9853f;
         xQueueOverwrite(xVbusQueue, &voltage);
